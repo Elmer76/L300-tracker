@@ -1,6 +1,6 @@
 {
-  "name": "Trip Log GPS",
-  "short_name": "GPS Log",
+  "name": "GPS Log",
+  "short_name": "TripLog",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
