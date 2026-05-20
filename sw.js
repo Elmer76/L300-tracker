@@ -1,7 +1,7 @@
 const CACHE_NAME = 'triplog-v5'; 
 const FILES_TO_CACHE = [ 
   './', 
-  './index.html', 
+  './index.html',
   './manifest.json', 
   './truck-192.png', 
   './truck-512.png' 
