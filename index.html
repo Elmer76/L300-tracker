@@ -1,107 +1,94 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Trip Log GPS</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#238636">
-<style>
-* { box-sizing: border-box; font-family: system-ui, sans-serif; }
-body { margin: 0; padding: 16px; background: #f3f4f6; }
-.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
-h1 { margin: 0 0 16px; font-size: 22px; color: #111827; }
-label { display: block; margin: 12px 0 4px; font-weight: 600; color: #374151; }
-input, select, textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 16px; }
-button { width: 100%; margin-top: 16px; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; }
-button:disabled { background: #9ca3af; }
-#status { margin-top: 12px; text-align: center; font-size: 14px; padding: 8px; border-radius: 6px; }
-.online { background: #d1fae5; color: #059669; }
-.offline { background: #fee2e2; color: #dc2626; }
-.msg { margin-top: 12px; text-align: center; font-size: 14px; }
-.success { color: #059669; }
-.error { color: #dc2626; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trip Log GPS</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#238636">
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, sans-serif; }
+    body { margin: 0; padding: 16px; background: #f3f4f6; }
+    .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+    h1 { margin: 0 0 16px; font-size: 22px; color: #111827; }
+    button { width: 100%; margin-top: 16px; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; }
+    button:disabled { background: #9ca3af; }
+    #msg { margin-top: 12px; text-align: center; font-size: 14px; }
+  </style>
 </head>
 <body>
-<!-- Auto GPS Section -->
-<h3>Live GPS Tracker</h3>
-<div>Status: <span id="gpsStatus">Off</span></div>
-<button onclick="startGpsTracking()">Start GPS</button>
-<button onclick="stopGpsTracking()">Stop GPS</button>
+  <div class="card">
+    <h1>Trip Log GPS</h1>
+    <h3>Live GPS Tracker</h3>
+    <div>Status: <span id="gpsStatus">Off</span></div>
+    <button onclick="startGpsTracking()">Start GPS</button>
+    <button onclick="stopGpsTracking()">Stop GPS</button>
+    <div id="msg" class="msg"></div>
+  </div>
 
-  <div id="msg" class="msg"></div>
-</div>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
 
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzycV23RYJ_TvucWmOE7Kvnv3t9U6b-uPA2GUjCOGJ5gKPlnPA1ym4CM8LP_tz5m2al/exec';
+    let watchId = null;
+    let lastSentTime = 0;
+    let wakeLock = null;
+    const SEND_INTERVAL = 15000;
 
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js');
-  });
-}
+    async function requestWakeLock() {
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+      } catch (err) {}
+    }
 
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzycV23RYJ_TvucWmOE7Kvnv3t9U6b-uPA2GUjCOGJ5gKPlnPA1ym4CM8LP_tz5m2al/exec';
-const QUEUE_KEY = 'trip_queue';
-
-// ===== GPS TRACKER - AUTO =====
-let watchId = null;
-let lastSentTime = 0;
-const SEND_INTERVAL = 15000; // 15 sec
-
-function startGpsTracking() {
-  if (!navigator.geolocation) {
-    document.getElementById('gpsStatus').innerText = 'GPS not supported';
-    return;
-  }
-  
-  document.getElementById('gpsStatus').innerText = 'GPS: Requesting permission...';
-  
-  watchId = navigator.geolocation.watchPosition(
-    (pos) => {
-      const now = Date.now();
-      document.getElementById('gpsStatus').innerText = 
-        `Live: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-      
-      if (now - lastSentTime > SEND_INTERVAL) {
-        lastSentTime = now;
-        
-        fetch(SCRIPT_URL, { // NOW USES CORRECT VARIABLE
-          method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify({
-            sheet: 'location',
-            timestamp: now,
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracy: Math.round(pos.coords.accuracy),
-            speed: pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) : 0,
-            note: 'Auto Track'
-          })
-        }).catch(err => {
-          document.getElementById('gpsStatus').innerText = 'Send error: ' + err;
-        });
+    function startGpsTracking() {
+      if (!navigator.geolocation) {
+        document.getElementById('gpsStatus').innerText = 'GPS not supported';
+        return;
       }
-    },
-    (err) => {
-      document.getElementById('gpsStatus').innerText = 'GPS Error: ' + err.message;
-    },
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-  );
-}
+      requestWakeLock();
+      document.getElementById('gpsStatus').innerText = 'GPS: Requesting permission...';
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          const now = Date.now();
+          document.getElementById('gpsStatus').innerText = `Live: ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+          if (now - lastSentTime > SEND_INTERVAL) {
+            lastSentTime = now;
+            fetch(SCRIPT_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              body: JSON.stringify({
+                sheet: 'location',
+                timestamp: now,
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude,
+                accuracy: Math.round(pos.coords.accuracy),
+                speed: pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(1) : 0,
+                note: 'Auto Track'
+              })
+            }).catch(err => {
+              document.getElementById('msg').innerText = 'Send error: ' + err;
+            });
+          }
+        },
+        (err) => {
+          document.getElementById('gpsStatus').innerText = 'GPS Error: ' + err.message;
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+      );
+    }
 
-function stopGpsTracking() {
-  if (watchId) navigator.geolocation.clearWatch(watchId);
-  document.getElementById('gpsStatus').innerText = 'GPS: Stopped';
-}
+    function stopGpsTracking() {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+      if (wakeLock) wakeLock.release();
+      document.getElementById('gpsStatus').innerText = 'GPS: Stopped';
+    }
 
-// Auto-start GPS when page loads
-window.addEventListener('load', startGpsTracking);
-</script>
-<script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
+    window.addEventListener('load', startGpsTracking);
+  </script>
 </body>
 </html>
