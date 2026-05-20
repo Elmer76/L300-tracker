@@ -7,11 +7,15 @@ const FILES_TO_CACHE = [
   './truck-512.png' 
 ];
 
-self.addEventListener('install', (evt) => { 
+self.addEventListener('install', (evt) => {
   evt.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
-  ); 
-  self.skipWaiting(); 
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(FILES_TO_CACHE).catch(err => {
+        console.log('Cache addAll failed:', err);
+      });
+    })
+  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (evt) => { 
