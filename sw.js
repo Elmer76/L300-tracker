@@ -2,9 +2,9 @@ const CACHE_NAME = 'triplog-v5';
 const FILES_TO_CACHE = [ 
   './', 
   './index.html',
-  './manifest.json', 
-  './truck-192.png', 
-  './truck-512.png' 
+  './manifest.json',
+  './gps-192.png', 
+  './gps-512.png' 
 ];
 
 self.addEventListener('install', (evt) => {
