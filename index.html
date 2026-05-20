@@ -97,5 +97,11 @@ function stopGpsTracking() {
 
 // Auto-start GPS when page loads
 window.addEventListener('load', startGpsTracking);
-</script></body>
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
+</body>
 </html>
