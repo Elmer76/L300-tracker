@@ -24,23 +24,6 @@ button:disabled { background: #9ca3af; }
 </style>
 </head>
 <body>
-<div class="card">
-  <h2>JHOIE Log Trip</h2>
-  
-  <!-- Online/Offline Status -->
-  <div id="status">Checking connection...</div>
-  
-  <form id="f">
-    <label>Date <input name="date" type="date" required></label>
-    <label>Trucking Code <input name="truck" placeholder="TT1" required></label>
-    <label>Drop Off Area <input name="from" placeholder="Manila" required></label>
-    <label>Cash Advance ₱ <input name="cash" type="number" step="0.01" placeholder="0" required></label>
-    <label>Fuel ₱ <input name="fuel" type="number" step="0.01" placeholder="0" required></label>
-    <label>Odometer <input name="odo" type="number" placeholder="km" required></label>
-    <label>Notes <textarea name="notes" rows="2" placeholder="Day/Night" required></textarea></label>
-    <button type="submit" id="btn">Save Trip</button>
-  </form>
-
 <!-- Auto GPS Section -->
 <h3>Live GPS Tracker</h3>
 <div>Status: <span id="gpsStatus">Off</span></div>
@@ -60,92 +43,6 @@ if ('serviceWorker' in navigator) {
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzycV23RYJ_TvucWmOE7Kvnv3t9U6b-uPA2GUjCOGJ5gKPlnPA1ym4CM8LP_tz5m2al/exec';
 const QUEUE_KEY = 'trip_queue';
-
-// Set today's date
-document.querySelector('[name="date"]').valueAsDate = new Date();
-
-// Update online/offline status
-function updateStatus() {
-  const statusDiv = document.getElementById('status');
-  if (navigator.onLine) {
-    statusDiv.className = 'online';
-    statusDiv.textContent = '● Online';
-    syncQueue();
-  } else {
-    statusDiv.className = 'offline';
-    statusDiv.textContent = '● Offline - will save locally';
-  }
-}
-window.addEventListener('online', updateStatus);
-window.addEventListener('offline', updateStatus);
-updateStatus();
-
-// Save to queue in localStorage
-function saveOffline(data) {
-  const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-  queue.push(data);
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-}
-
-// Sync queued items when online
-async function syncQueue() {
-  const queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-  if (queue.length === 0) return;
-  const msg = document.getElementById('msg');
-  msg.textContent = `Syncing ${queue.length} offline trip(s)...`;
-  for (let i = queue.length - 1; i >= 0; i--) {
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify(queue[i])
-      });
-      queue.splice(i, 1);
-    } catch (err) {
-      break;
-    }
-  }
-  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-  if (queue.length === 0) {
-    msg.textContent = 'All trips synced!';
-    setTimeout(() => msg.textContent = '', 3000);
-  } else {
-    msg.textContent = `${queue.length} trip(s) still waiting to sync`;
-  }
-}
-
-// Manual trip log submit
-document.getElementById('f').onsubmit = async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('btn');
-  const msg = document.getElementById('msg');
-  btn.disabled = true;
-  btn.textContent = 'Saving...';
-  const data = Object.fromEntries(new FormData(e.target).entries());
-  data.sheet = 'trip_log'; // make sure it goes to trip_log tab
-  const now = new Date();
-  data.timestamp = now.toLocaleString('en-US', {
-    month: '2-digit', day: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  });
-  try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: JSON.stringify(data)
-    });
-    msg.className = 'msg success';
-    msg.textContent = 'Trip saved. Salamat!';
-    e.target.reset();
-    document.querySelector('[name="date"]').valueAsDate = new Date();
-  } catch(err) {
-    saveOffline(data);
-    msg.className = 'msg error';
-    msg.textContent = 'Saved offline. Will sync when online.';
-  }
-  btn.disabled = false;
-  btn.textContent = 'Save Trip';
-};
 
 // ===== GPS TRACKER - AUTO =====
 let watchId = null;
